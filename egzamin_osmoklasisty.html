@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Egzamin Ósmoklasisty – Język Polski</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0f0f13;font-family:'Segoe UI',system-ui,sans-serif}
+  textarea:focus{outline:none}
+  button{font-family:inherit}
+  @keyframes twinkle{from{opacity:0.1}to{opacity:0.9}}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  .fade-in{animation:fadeIn 0.4s ease forwards}
+  ::-webkit-scrollbar{width:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useRef,useEffect}=React;
+
+const THEMES={
+  dark:{name:"Ciemny",bg:"#0f0f13",surface:"#1a1a24",card:"#22222f",border:"#333350",accent:"#7c6af7",accentHover:"#9d8fff",text:"#e8e8f0",muted:"#9090a8",stars:null},
+  galaxy:{name:"Galaktyka",bg:"#020510",surface:"#080d24",card:"#0c1230",border:"#1a2560",accent:"#4d9fff",accentHover:"#7ab8ff",text:"#d0e8ff",muted:"#7090b8",stars:"#fff"},
+  aurora:{name:"Aurora",bg:"#060d10",surface:"#0a1a18",card:"#0e2420",border:"#1a4035",accent:"#00d4a0",accentHover:"#00ffbe",text:"#ccf5ef",muted:"#60a898",stars:"#00d4a0"},
+};
+
+const TASKS=[
+  {id:"wypracowanie",icon:"✍️",title:"Wypracowanie",subtitle:"Napisz esej lub rozprawkę",criteria:"wypracowanie",minWords:200,
+   prompt:`Napisz wypracowanie na jeden z poniższych tematów:\n\n1. Opisz postać literacką, która wywarła na Ciebie największe wrażenie i wyjaśnij, dlaczego.\n2. Czy samotność może być dobra dla człowieka? Rozważ problem, odwołując się do literatury i własnych przemyśleń.\n3. Motyw podróży jako metafora życia – omów na podstawie wybranych dzieł literackich.\n\nWybierz jeden temat i napisz wypracowanie (minimum 200 słów).`,
+   placeholder:"Wpisz tutaj swoje wypracowanie (minimum 200 słów)..."},
+  {id:"zaproszenie",icon:"📨",title:"Zaproszenie",subtitle:"Napisz zaproszenie na wydarzenie",criteria:"zaproszenie",minWords:50,
+   prompt:`Napisz zaproszenie na jedno z poniższych wydarzeń:\n\n1. Zaproszenie na szkolny spektakl teatralny skierowane do rodziców uczniów.\n2. Zaproszenie na urodzinowe przyjęcie dla przyjaciół.\n3. Zaproszenie na wystawę prac plastycznych uczniów skierowane do dyrektora szkoły.\n\nPamiętaj o wszystkich elementach zaproszenia: nagłówek, adresat, treść, data, miejsce, podpis.`,
+   placeholder:"Wpisz tutaj swoje zaproszenie..."},
+  {id:"przemowa",icon:"🎤",title:"Przemowa",subtitle:"Napisz mowę lub przemówienie",criteria:"przemówienie",minWords:100,
+   prompt:`Napisz przemówienie na jeden z poniższych tematów:\n\n1. Przemówienie na zakończenie roku szkolnego wygłaszane przez przewodniczącego samorządu uczniowskiego.\n2. Mowa powitalna na szkolnym apelu z okazji Dnia Niepodległości.\n3. Przemówienie na uroczystości wręczenia nagród dla najlepszych uczniów.\n\nPamiętaj o zwrocie do słuchaczy, strukturze i odpowiednim stylu.`,
+   placeholder:"Wpisz tutaj swoje przemówienie..."},
+];
+
+const SYSTEM_PROMPT=`Jesteś egzaminatorem Centralnej Komisji Egzaminacyjnej (CKE) oceniającym prace uczniów klasy ósmej na egzaminie ósmoklasisty z języka polskiego.
+
+Oceniaj pracę surowo, ale sprawiedliwie, zgodnie z kryteriami CKE. Twoja ocena musi zawierać:
+
+**OCENA OGÓLNA: X/10 punktów** – zacznij od tej linii z konkretną liczbą
+
+Następnie omów kolejno:
+1. TREŚĆ I REALIZACJA TEMATU – czy uczeń odpowiedział na temat, czy rozwinął myśl
+2. KOMPOZYCJA – wstęp, rozwinięcie, zakończenie; logika i spójność tekstu
+3. JĘZYK I STYL – bogactwo słownictwa, poprawność stylistyczna, stosowność rejestru
+4. ORTOGRAFIA I INTERPUNKCJA – wskaż konkretne błędy cytując fragmenty z pracy i podaj poprawną formę
+5. MOCNE STRONY – co uczeń zrobił dobrze
+6. CO WYMAGA POPRAWY – konkretne, konstruktywne wskazówki
+
+Formatuj odpowiedź czytelnie. Podawaj konkretne cytaty gdy wskazujesz błędy. Pisz wyłącznie po polsku. Bądź precyzyjny i edukacyjny.`;
+
+function Stars({theme}){
+  if(!theme.stars)return null;
+  const[stars]=useState(()=>Array.from({length:100},(_,i)=>({
+    id:i,x:Math.random()*100,y:Math.random()*100,
+    size:Math.random()*2+0.5,op:Math.random()*0.6+0.2,
+    dur:(Math.random()*3+2).toFixed(1),
+  })));
+  return(
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0}}>
+      {stars.map(s=>(
+        <div key={s.id} style={{
+          position:"absolute",left:`${s.x}%`,top:`${s.y}%`,
+          width:s.size,height:s.size,borderRadius:"50%",
+          background:theme.stars,opacity:s.op,
+          animation:`twinkle ${s.dur}s ease-in-out infinite alternate`,
+        }}/>
+      ))}
+    </div>
+  );
+}
+
+function ThemePicker({cur,onChange,theme}){
+  const[open,setOpen]=useState(false);
+  return(
+    <div style={{position:"relative"}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{
+        background:theme.surface,border:`1px solid ${theme.border}`,
+        borderRadius:10,color:theme.text,padding:"8px 14px",
+        cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",gap:6,
+      }}>🎨 Motyw</button>
+      {open&&(
+        <div style={{
+          position:"absolute",right:0,top:"calc(100% + 8px)",
+          background:theme.card,border:`1px solid ${theme.border}`,
+          borderRadius:12,overflow:"hidden",zIndex:200,minWidth:160,
+          boxShadow:"0 8px 32px #0008",
+        }}>
+          {Object.entries(THEMES).map(([k,t])=>(
+            <button key={k} onClick={()=>{onChange(k);setOpen(false);}} style={{
+              display:"block",width:"100%",padding:"10px 16px",
+              background:cur===k?theme.accent+"22":"transparent",
+              border:"none",color:cur===k?theme.accent:theme.text,
+              cursor:"pointer",textAlign:"left",fontSize:14,
+              fontWeight:cur===k?700:400,
+            }}>
+              {k==="dark"&&"🌑 "}{k==="galaxy"&&"🌌 "}{k==="aurora"&&"🌿 "}{t.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function renderMd(md,accent){
+  return md
+    .replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>")
+    .replace(/^#{1,2} (.+)$/gm,`<h3 style="color:${accent};margin:1.2em 0 0.4em;font-size:1rem;font-weight:700;">$1</h3>`)
+    .replace(/^\d+\. (.+)$/gm,"<li style='margin:0.35em 0 0.35em 1.3em;'>$1</li>")
+    .replace(/^[-*] (.+)$/gm,"<li style='margin:0.3em 0 0.3em 1.3em;'>$1</li>")
+    .replace(/\n\n/g,"<br/><br/>")
+    .replace(/\n/g,"<br/>");
+}
+
+function App(){
+  const[themeKey,setThemeKey]=useState("dark");
+  const t=THEMES[themeKey];
+  const[screen,setScreen]=useState("home");
+  const[task,setTask]=useState(null);
+  const[text,setText]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[result,setResult]=useState("");
+  const[err,setErr]=useState("");
+  const topRef=useRef(null);
+
+  useEffect(()=>{
+    if(topRef.current)topRef.current.scrollIntoView({behavior:"smooth"});
+  },[screen]);
+
+  async function grade(){
+    const words=text.trim().split(/\s+/).filter(Boolean).length;
+    if(words<10){setErr("Proszę napisać dłuższy tekst przed oceną.");return;}
+    setErr("");setLoading(true);setResult("");
+    try{
+      const r=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1000,
+          system:SYSTEM_PROMPT,
+          messages:[{role:"user",content:`Rodzaj pracy: ${task.criteria}\n\nTreść pracy ucznia:\n\n${text}`}],
+        }),
+      });
+      const d=await r.json();
+      const txt=d.content?.map(b=>b.text||"").join("\n")||"Brak odpowiedzi.";
+      setResult(txt);setScreen("result");
+    }catch(e){setErr("Błąd połączenia z AI. Sprawdź połączenie i spróbuj ponownie.");}
+    setLoading(false);
+  }
+
+  function reset(){setScreen("home");setTask(null);setText("");setResult("");setErr("");}
+
+  const card={background:t.card,border:`1px solid ${t.border}`,borderRadius:16};
+  const words=text.trim()?text.trim().split(/\s+/).filter(Boolean).length:0;
+
+  return(
+    <div style={{minHeight:"100vh",background:t.bg,color:t.text}} ref={topRef}>
+      <Stars theme={t}/>
+      <div style={{position:"relative",zIndex:1,maxWidth:820,margin:"0 auto",padding:"0 20px 80px"}}>
+
+        {/* HEADER */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"24px 0 16px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,cursor:"pointer"}} onClick={reset}>
+            <div style={{width:38,height:38,borderRadius:10,background:t.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>📚</div>
+            <div>
+              <div style={{fontWeight:700,fontSize:15,letterSpacing:0.3,color:t.text}}>Egzamin Ósmoklasisty</div>
+              <div style={{fontSize:11,color:t.muted}}>Język Polski · Trening z AI</div>
+            </div>
+          </div>
+          <ThemePicker cur={themeKey} onChange={setThemeKey} theme={t}/>
+        </div>
+
+        {/* HOME */}
+        {screen==="home"&&(
+          <div className="fade-in">
+            <div style={{textAlign:"center",padding:"44px 0 52px"}}>
+              <div style={{display:"inline-block",background:t.accent+"18",border:`1px solid ${t.accent}44`,color:t.accent,borderRadius:20,padding:"4px 14px",fontSize:12,marginBottom:20,fontWeight:700,letterSpacing:0.8}}>
+                CKE · PRZYGOTOWANIE DO EGZAMINU
+              </div>
+              <h1 style={{fontSize:"clamp(1.8rem,5vw,2.7rem)",fontWeight:800,margin:"0 0 16px",lineHeight:1.15,color:t.text}}>
+                Napisz i oceń swoją pracę
+              </h1>
+              <p style={{color:t.muted,fontSize:16,maxWidth:480,margin:"0 auto",lineHeight:1.75}}>
+                Ćwicz pisanie na egzamin ósmoklasisty. Sztuczna inteligencja oceni Twoją pracę jak prawdziwy egzaminator CKE i wskaże wszystkie błędy.
+              </p>
+            </div>
+
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:20,marginBottom:40}}>
+              {TASKS.map(task=>(
+                <button key={task.id} onClick={()=>{setTask(task);setScreen("task");}} style={{
+                  ...card,padding:"28px 24px",cursor:"pointer",textAlign:"left",
+                  color:t.text,transition:"border-color 0.2s,transform 0.15s",
+                  display:"block",width:"100%",
+                }}
+                onMouseOver={e=>{e.currentTarget.style.borderColor=t.accent;e.currentTarget.style.transform="translateY(-3px)";}}
+                onMouseOut={e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.transform="translateY(0)";}}>
+                  <div style={{fontSize:38,marginBottom:14}}>{task.icon}</div>
+                  <div style={{fontWeight:700,fontSize:18,marginBottom:6,color:t.text}}>{task.title}</div>
+                  <div style={{color:t.muted,fontSize:13,lineHeight:1.6}}>{task.subtitle}</div>
+                  <div style={{marginTop:20,color:t.accent,fontSize:13,fontWeight:700}}>Zacznij pisać →</div>
+                </button>
+              ))}
+            </div>
+
+            <div style={{...card,padding:"20px 24px",display:"flex",gap:16,alignItems:"flex-start"}}>
+              <div style={{fontSize:22,marginTop:2}}>💡</div>
+              <div>
+                <div style={{fontWeight:700,marginBottom:6,fontSize:15,color:t.text}}>Jak to działa?</div>
+                <div style={{color:t.muted,fontSize:14,lineHeight:1.75}}>
+                  Wybierz rodzaj formy wypowiedzi, przeczytaj tematy i napisz pracę w polu tekstowym. Kliknij „Oceń moją pracę" — AI przeanalizuje tekst zgodnie z kryteriami egzaminu ósmoklasisty i wskaże błędy, mocne strony oraz sposoby poprawy.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TASK */}
+        {screen==="task"&&task&&(
+          <div className="fade-in">
+            <button onClick={reset} style={{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:14,padding:"8px 0 24px",display:"flex",alignItems:"center",gap:6}}>
+              ← Powrót
+            </button>
+            <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:28}}>
+              <span style={{fontSize:36}}>{task.icon}</span>
+              <div>
+                <h2 style={{margin:0,fontSize:22,fontWeight:800,color:t.text}}>{task.title}</h2>
+                <div style={{color:t.muted,fontSize:14}}>{task.subtitle}</div>
+              </div>
+            </div>
+
+            <div style={{...card,padding:"22px 24px",marginBottom:24,background:t.surface}}>
+              <div style={{color:t.accent,fontWeight:700,fontSize:12,marginBottom:14,textTransform:"uppercase",letterSpacing:1}}>Tematy do wyboru</div>
+              <pre style={{margin:0,whiteSpace:"pre-wrap",color:t.text,fontSize:14,lineHeight:1.85,fontFamily:"inherit"}}>{task.prompt}</pre>
+            </div>
+
+            <div style={{marginBottom:10,fontWeight:600,fontSize:14,color:t.text}}>Twoja praca:</div>
+            <textarea
+              value={text}
+              onChange={e=>setText(e.target.value)}
+              placeholder={task.placeholder}
+              style={{
+                width:"100%",minHeight:300,background:t.surface,
+                border:`1px solid ${t.border}`,borderRadius:12,
+                color:t.text,fontSize:15,lineHeight:1.75,
+                padding:16,resize:"vertical",fontFamily:"inherit",
+                transition:"border-color 0.2s",
+              }}
+              onFocus={e=>e.target.style.borderColor=t.accent}
+              onBlur={e=>e.target.style.borderColor=t.border}
+            />
+
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8,marginBottom:20}}>
+              <div style={{fontSize:13,color:t.muted}}>
+                Słów: <span style={{fontWeight:600,color:task.minWords&&words>=task.minWords?"#4caf50":t.text}}>{words}</span>
+                {task.minWords&&<span style={{color:t.muted}}> / min. {task.minWords}</span>}
+              </div>
+              {task.minWords&&words>0&&words<task.minWords&&(
+                <div style={{fontSize:12,color:"#ff9944"}}>⚠ Brakuje jeszcze {task.minWords-words} słów</div>
+              )}
+            </div>
+
+            {err&&(
+              <div style={{background:"#ff444418",border:"1px solid #ff4444",borderRadius:10,padding:"12px 16px",color:"#ff8888",fontSize:14,marginBottom:16}}>
+                ⚠ {err}
+              </div>
+            )}
+
+            <button onClick={grade} disabled={loading} style={{
+              width:"100%",padding:16,
+              background:loading?t.muted:t.accent,
+              border:"none",borderRadius:12,color:"#fff",
+              fontWeight:700,fontSize:16,cursor:loading?"not-allowed":"pointer",
+              transition:"background 0.2s,opacity 0.2s",letterSpacing:0.3,
+              opacity:loading?0.7:1,
+            }}>
+              {loading?"⏳ Trwa ocenianie przez AI CKE...":"🎓 Oceń moją pracę"}
+            </button>
+          </div>
+        )}
+
+        {/* RESULT */}
+        {screen==="result"&&(
+          <div className="fade-in">
+            <button onClick={()=>setScreen("task")} style={{background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:14,padding:"8px 0 24px",display:"flex",alignItems:"center",gap:6}}>
+              ← Wróć do pracy
+            </button>
+
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:24}}>
+              <span style={{fontSize:30}}>🎓</span>
+              <h2 style={{margin:0,fontSize:20,fontWeight:800,color:t.text}}>Ocena egzaminatora CKE</h2>
+            </div>
+
+            <div style={{...card,padding:"28px 28px",marginBottom:24,lineHeight:1.8,fontSize:15}}>
+              <div dangerouslySetInnerHTML={{__html:renderMd(result,t.accent)}}/>
+            </div>
+
+            <div style={{...card,padding:"18px 22px",marginBottom:24,background:t.accent+"12",borderColor:t.accent+"44"}}>
+              <div style={{fontWeight:700,marginBottom:6,fontSize:14,color:t.text}}>💪 Co dalej?</div>
+              <div style={{color:t.muted,fontSize:13,lineHeight:1.65}}>
+                Przeczytaj uwagi egzaminatora, popraw błędy i napisz pracę jeszcze raz. Regularne ćwiczenia to klucz do sukcesu na egzaminie ósmoklasisty!
+              </div>
+            </div>
+
+            <div style={{display:"flex",gap:12}}>
+              <button onClick={()=>{setText("");setResult("");setScreen("task");}} style={{
+                flex:1,padding:14,background:t.surface,border:`1px solid ${t.border}`,
+                borderRadius:12,color:t.text,fontWeight:600,fontSize:15,cursor:"pointer",
+              }}>✏️ Napisz od nowa</button>
+              <button onClick={reset} style={{
+                flex:1,padding:14,background:t.accent,border:"none",
+                borderRadius:12,color:"#fff",fontWeight:700,fontSize:15,cursor:"pointer",
+              }}>🏠 Strona główna</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const root=ReactDOM.createRoot(document.getElementById("root"));
+root.render(React.createElement(App));
+</script>
+</body>
+</html>
